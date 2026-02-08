@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { Suspense, useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
@@ -130,7 +130,7 @@ const quizQuestions = [
 	},
 ]
 
-export default function SpiderManLoveStory() {
+function SpiderManLoveStoryContent() {
 	const searchParams = useSearchParams()
 	const [currentPage, setCurrentPage] = useState(0)
 	const [showConfetti, setShowConfetti] = useState(false)
@@ -522,5 +522,23 @@ export default function SpiderManLoveStory() {
 				</div>
 			</div>
 		</div>
+	)
+}
+
+export default function SpiderManLoveStory() {
+	return (
+		<Suspense
+			fallback={
+				<div className="min-h-screen bg-white relative overflow-hidden comic-page">
+					<div className="container mx-auto px-4 py-10 relative z-10">
+						<div className="comic-panel bg-white border-8 border-black p-6 shadow-2xl text-center font-black">
+							Cargando...
+						</div>
+					</div>
+				</div>
+			}
+		>
+			<SpiderManLoveStoryContent />
+		</Suspense>
 	)
 }

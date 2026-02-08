@@ -1,13 +1,13 @@
 "use client"
 
-import { useEffect, useMemo, useState } from "react"
+import { Suspense, useEffect, useMemo, useState } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
 
 const icons = ["💖", "🕷️", "🌹", "😄", "🕸️", "🌟"]
 
-export default function JuegoSonrisaPage() {
+function JuegoSonrisaPageContent() {
 	const searchParams = useSearchParams()
 	const returnPage = searchParams.get("page") ?? "0"
 	const returnHref = `/?page=${returnPage}`
@@ -97,5 +97,23 @@ export default function JuegoSonrisaPage() {
 				</div>
 			</div>
 		</div>
+	)
+}
+
+export default function JuegoSonrisaPage() {
+	return (
+		<Suspense
+			fallback={
+				<div className="min-h-screen bg-white relative overflow-hidden comic-page">
+					<div className="container mx-auto px-4 py-10 relative z-10">
+						<div className="comic-panel bg-white border-8 border-black p-6 shadow-2xl text-center font-black">
+							Cargando...
+						</div>
+					</div>
+				</div>
+			}
+		>
+			<JuegoSonrisaPageContent />
+		</Suspense>
 	)
 }
