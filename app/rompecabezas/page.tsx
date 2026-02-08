@@ -33,6 +33,7 @@ function RompecabezasPageContent() {
 		return initial
 	})
 	const [dragIndex, setDragIndex] = useState<number | null>(null)
+	const [selectedIndex, setSelectedIndex] = useState<number | null>(null)
 	const isSolved = pieces.every((piece, index) => piece === index)
 
 	const handleDragStart = (index: number) => {
@@ -47,6 +48,23 @@ function RompecabezasPageContent() {
 			return next
 		})
 		setDragIndex(null)
+	}
+
+	const handleTapSwap = (index: number) => {
+		if (selectedIndex === null) {
+			setSelectedIndex(index)
+			return
+		}
+		if (selectedIndex === index) {
+			setSelectedIndex(null)
+			return
+		}
+		setPieces((prev) => {
+			const next = [...prev]
+			;[next[selectedIndex], next[index]] = [next[index], next[selectedIndex]]
+			return next
+		})
+		setSelectedIndex(null)
 	}
 
 	return (
@@ -78,6 +96,7 @@ function RompecabezasPageContent() {
 							{pieces.map((piece, index) => {
 								const row = Math.floor(piece / puzzleSize)
 								const col = piece % puzzleSize
+								const isSelected = selectedIndex === index
 								return (
 									<div
 										key={`${piece}-${index}`}
@@ -85,7 +104,10 @@ function RompecabezasPageContent() {
 										onDragStart={() => handleDragStart(index)}
 										onDragOver={(event) => event.preventDefault()}
 										onDrop={() => handleDrop(index)}
-										className="aspect-square border-4 border-black shadow-lg cursor-grab active:cursor-grabbing"
+										onClick={() => handleTapSwap(index)}
+										className={`aspect-square border-4 border-black shadow-lg cursor-grab active:cursor-grabbing ${
+											isSelected ? "ring-4 ring-yellow-300" : ""
+										}`}
 										style={{
 											backgroundImage: `url(${puzzleImage})`,
 											backgroundSize: `${puzzleSize * 100}% ${puzzleSize * 100}%`,
@@ -96,7 +118,7 @@ function RompecabezasPageContent() {
 							})}
 						</div>
 						<p className="text-xs mt-3 font-bold text-black">
-							Tip: arrastra una pieza sobre otra para intercambiarlas.
+							Tip: arrastra una pieza sobre otra para intercambiarlas o toca dos piezas para cambiarlas.
 						</p>
 					</div>
 				</div>

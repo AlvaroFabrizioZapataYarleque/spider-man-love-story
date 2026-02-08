@@ -1,6 +1,6 @@
 "use client"
 
-import { Suspense, useMemo, useState } from "react"
+import { Suspense, useMemo, useState, type PointerEvent } from "react"
 import Link from "next/link"
 import { useSearchParams } from "next/navigation"
 import { Button } from "@/components/ui/button"
@@ -148,7 +148,8 @@ function PupiletraPageContent() {
 		return getLineCells(startCell, endCell)
 	}, [isSelecting, startCell, endCell])
 
-	const handlePointerDown = (cell: Cell) => {
+	const handlePointerDown = (event: PointerEvent<HTMLDivElement>, cell: Cell) => {
+		event.currentTarget.setPointerCapture(event.pointerId)
 		setIsSelecting(true)
 		setStartCell(cell)
 		setEndCell(cell)
@@ -157,6 +158,19 @@ function PupiletraPageContent() {
 	const handlePointerEnter = (cell: Cell) => {
 		if (!isSelecting) return
 		setEndCell(cell)
+	}
+
+	const handlePointerMove = (event: PointerEvent<HTMLDivElement>) => {
+		if (!isSelecting) return
+		const target = document.elementFromPoint(event.clientX, event.clientY) as HTMLElement | null
+		if (!target) return
+		const rowAttr = target.getAttribute("data-row")
+		const colAttr = target.getAttribute("data-col")
+		if (!rowAttr || !colAttr) return
+		const row = Number(rowAttr)
+		const col = Number(colAttr)
+		if (Number.isNaN(row) || Number.isNaN(col)) return
+		handlePointerEnter({ row, col })
 	}
 
 	const finalizeSelection = () => {
@@ -214,6 +228,7 @@ function PupiletraPageContent() {
 				<div className="max-w-5xl mx-auto grid gap-8 lg:grid-cols-[1fr_320px]">
 						<div
 							className="comic-panel bg-white border-8 border-black p-4 sm:p-6 shadow-2xl"
+							onPointerMove={handlePointerMove}
 							onPointerUp={finalizeSelection}
 							onPointerLeave={() => isSelecting && finalizeSelection()}
 						>
@@ -232,7 +247,7 @@ function PupiletraPageContent() {
 											(cell) => cell.row === rowIndex && cell.col === colIndex,
 										)
 										return (
-											<div
+												<div
 												key={key}
 												className={`border-2 border-black py-1 sm:py-2 touch-none cursor-pointer ${
 													isFound
@@ -241,8 +256,12 @@ function PupiletraPageContent() {
 														? "bg-yellow-300"
 														: "bg-yellow-100"
 												} text-black`}
-												onPointerDown={() => handlePointerDown({ row: rowIndex, col: colIndex })}
-												onPointerEnter={() => handlePointerEnter({ row: rowIndex, col: colIndex })}
+													data-row={rowIndex}
+													data-col={colIndex}
+													onPointerDown={(event) =>
+														handlePointerDown(event, { row: rowIndex, col: colIndex })
+													}
+													onPointerEnter={() => handlePointerEnter({ row: rowIndex, col: colIndex })}
 											>
 												{letter}
 											</div>
