@@ -2,7 +2,10 @@
 
 import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
+import Link from "next/link"
+import { useSearchParams } from "next/navigation"
 import { ChevronLeft, ChevronRight, Heart, Volume2, VolumeX } from "lucide-react"
+import { useAudio } from "@/components/audio-provider"
 
 const pages = [
 	{
@@ -25,7 +28,7 @@ const pages = [
 		id: 3,
 		title: "Tu sonrisa es mi kriptonita",
 		message: "Cada vez que sonríes, pierdo todos mis poderes... excepto el de enamorarme más de ti cada día.",
-		spiderText: "¡Ups! Esa es de Superman, pero es lo mismo y se da bien 😄",
+		spiderText: "¡Ups! Esa es de Superman, pero funciona igual de bien 😄",
 		image: "/fotos/foto3.jpg",
 	},
 	{
@@ -69,65 +72,102 @@ const pages = [
 	{
 		id: 9,
 		title: "¡La gran revelación!",
-		message: "Me gustas demasiado ❤️",
+		message: "La gran revelación: eres tú, ¿estás apta para ser mi Mary Jane? ❤️",
 		spiderText: "¡Misión cumplida! ¡El amor siempre gana!",
 		isConfession: true,
 		image: "/spider-man-animated-movie-style-character-in-red-a.jpg",
 	},
 ]
 
+const quizQuestions = [
+	{
+		id: 1,
+		question: "¿Cómo me llamo?",
+		options: ["Alvaro", "Diego", "Fernando", "Luis"],
+		correctIndex: 0,
+	},
+	{
+		id: 2,
+		question: "¿Dónde te conocí?",
+		options: ["En la playa", "En el parque", "En el cine", "En el colegio"],
+		correctIndex: 1,
+	},
+	{
+		id: 3,
+		question: "¿Cómo te llamas?",
+		options: ["Jimena", "Camila", "Daniela", "Valeria"],
+		correctIndex: 0,
+	},
+	{
+		id: 4,
+		question: "¿Cuál es mi color favorito?",
+		options: ["Rojo", "Azul", "Verde", "Negro"],
+		correctIndex: 1,
+	},
+	{
+		id: 5,
+		question: "¿Cuántos años tengo?",
+		options: ["20", "21", "22", "23"],
+		correctIndex: 2,
+	},
+	{
+		id: 6,
+		question: "¿Cuál es nuestra fecha de aniversario?",
+		options: ["10 de febrero", "14 de febrero", "10 de marzo", "12 de enero"],
+		correctIndex: 0,
+	},
+	{
+		id: 7,
+		question: "¿Cuánto tiempo llevamos juntos?",
+		options: ["2 años", "3 años", "4 años", "5 años"],
+		correctIndex: 2,
+	},
+	{
+		id: 8,
+		question: "¿Cuál es mi comida favorita?",
+		options: ["Ceviche", "Pizza", "Tallarines verdes", "Hamburguesa"],
+		correctIndex: 2,
+	},
+]
+
 export default function SpiderManLoveStory() {
+	const searchParams = useSearchParams()
 	const [currentPage, setCurrentPage] = useState(0)
 	const [showConfetti, setShowConfetti] = useState(false)
-	const [isPlaying, setIsPlaying] = useState(false)
-	const [audioElement, setAudioElement] = useState<HTMLAudioElement | null>(null)
+	const { isPlaying, toggle } = useAudio()
+	const [quizIndex, setQuizIndex] = useState(0)
+	const [quizScore, setQuizScore] = useState(0)
+	const [quizCompleted, setQuizCompleted] = useState(false)
+	const [selectedAnswer, setSelectedAnswer] = useState<number | null>(null)
+	const [answerFeedback, setAnswerFeedback] = useState<"correct" | "incorrect" | null>(null)
 
 	useEffect(() => {
-		const audio = new Audio("/sunflower-spiderman.mp3")
-		audio.loop = true
-		audio.volume = 0.3
-		setAudioElement(audio)
-
-		const playAudio = async () => {
-			try {
-				await audio.play()
-				setIsPlaying(true)
-			} catch (error) {
-				console.log("Auto-play blocked by browser")
-			}
+		const pageParam = Number(searchParams.get("page"))
+		if (!Number.isNaN(pageParam) && pageParam >= 0 && pageParam < pages.length) {
+			setCurrentPage(pageParam)
 		}
+	}, [searchParams])
 
-		playAudio()
-
-		return () => {
-			audio.pause()
-			audio.src = ""
-		}
-	}, [])
-
-	const toggleAudio = async () => {
-		if (!audioElement) return
-
-		if (isPlaying) {
-			audioElement.pause()
-			setIsPlaying(false)
-		} else {
-			try {
-				await audioElement.play()
-				setIsPlaying(true)
-			} catch (error) {
-				console.log("Could not play audio")
-			}
-		}
+	const toggleAudio = () => {
+		toggle()
 	}
 
 	useEffect(() => {
-		if (currentPage === 8) {
+		if (currentPage !== 8) return
+		setQuizIndex(0)
+		setQuizScore(0)
+		setQuizCompleted(false)
+		setSelectedAnswer(null)
+		setAnswerFeedback(null)
+	}, [currentPage])
+
+	useEffect(() => {
+		if (currentPage === 8 && quizCompleted) {
 			setShowConfetti(true)
 			const timer = setTimeout(() => setShowConfetti(false), 5000)
 			return () => clearTimeout(timer)
 		}
-	}, [currentPage])
+	}, [currentPage, quizCompleted])
 
 	const nextPage = () => {
 		if (currentPage < pages.length - 1) {
@@ -142,14 +182,57 @@ export default function SpiderManLoveStory() {
 	}
 
 	const currentPageData = pages[currentPage]
+	const isFinalPage = currentPageData.isConfession
+	const currentQuestion = quizQuestions[quizIndex]
+	const totalQuestions = quizQuestions.length
+	const revealConfession = !isFinalPage || quizCompleted
+	const quizPercentage = totalQuestions > 0 ? Math.round((quizScore / totalQuestions) * 100) : 0
+	const passedQuiz = quizPercentage >= 80
+	const confessionText = passedQuiz
+		? "La gran revelación: eres tú, estás apta para ser mi Mary Jane 💙🕸️"
+		: "No me conoces mucho... disculpa, pero no eres mi Mary Jane 😔"
+	const showWordSearchCta = currentPageData.id === 1
+	const showPuzzleCta = currentPageData.id === 2
+	const gameLinks: Record<number, { href: string; label: string }> = {
+		3: { href: "/juego-sonrisa", label: "Juega aquí Princesa 😄" },
+		4: { href: "/juego-mary-jane", label: "Juega aquí Amorcito 🌹" },
+		5: { href: "/juego-mundo", label: "Juega aquí Mi loquita 🥰" },
+		6: { href: "/juego-telarana", label: "Juega aquí Querida 🕸️" },
+		7: { href: "/juego-superpoder", label: "Juega aquí China 💥" },
+		8: { href: "/juego-sentido", label: "Juega aquí Mi amor 🕷️" },
+	}
+	const gameLink = gameLinks[currentPageData.id]
+	const returnQuery = `?page=${currentPage}`
+
+	const handleAnswer = (optionIndex: number) => {
+		if (selectedAnswer !== null || !currentQuestion) return
+		setSelectedAnswer(optionIndex)
+		if (optionIndex === currentQuestion.correctIndex) {
+			setAnswerFeedback("correct")
+			setQuizScore((prev) => prev + 1)
+		} else {
+			setAnswerFeedback("incorrect")
+		}
+	}
+
+	const nextQuestion = () => {
+		if (!currentQuestion) return
+		if (quizIndex < totalQuestions - 1) {
+			setQuizIndex((prev) => prev + 1)
+			setSelectedAnswer(null)
+			setAnswerFeedback(null)
+		} else {
+			setQuizCompleted(true)
+		}
+	}
 
 	return (
 		<div className="min-h-screen bg-white relative overflow-hidden comic-page">
-			<div className="fixed top-4 right-4 z-50">
+			<div className="fixed top-2 right-2 sm:top-4 sm:right-4 z-50">
 				<Button
 					onClick={toggleAudio}
 					size="lg"
-					className="comic-button bg-red-600 border-4 border-black font-black text-white hover:bg-red-700 transform hover:scale-105 shadow-xl"
+					className="comic-button bg-red-300 border-4 border-red-900 font-black text-white hover:bg-red-400 transform hover:scale-105 shadow-xl"
 				>
 					{isPlaying ? (
 						<Volume2 className="w-6 h-6" />
@@ -159,13 +242,13 @@ export default function SpiderManLoveStory() {
 				</Button>
 			</div>
 
-			<div className="fixed top-4 left-4 z-50">
-				<div className="comic-music-indicator bg-yellow-300 border-4 border-black p-3 transform -rotate-2 shadow-lg">
+			<div className="fixed top-2 left-2 sm:top-4 sm:left-4 z-50">
+				<div className="comic-music-indicator bg-yellow-300 border-4 border-black p-2 sm:p-3 transform -rotate-2 shadow-lg">
 					<div className="flex items-center gap-2">
-						<span className="text-2xl">🎵</span>
-						<div className="text-black font-black text-sm">
+						<span className="text-xl sm:text-2xl">🎵</span>
+						<div className="text-black font-black text-xs sm:text-sm">
 							<div>SUNFLOWER</div>
-							<div className="text-xs">Post Malone & Swae Lee</div>
+							<div className="text-[10px] sm:text-xs">Post Malone & Swae Lee</div>
 						</div>
 					</div>
 				</div>
@@ -242,15 +325,125 @@ export default function SpiderManLoveStory() {
 								</h2>
 							</div>
 							<div className="comic-narrative-box bg-white border-4 border-black p-3 sm:p-6 shadow-lg">
-								<div
-									className={`font-bold leading-relaxed ${
-										currentPageData.isConfession
-											? "text-4xl md:text-6xl text-red-600 comic-font uppercase tracking-wider"
-											: "text-lg md:text-xl text-white"
-									}`}
-								>
-									{currentPageData.message}
-								</div>
+								{revealConfession ? (
+									<>
+										<div
+											className={`font-bold leading-relaxed ${
+												currentPageData.isConfession
+													? `text-4xl md:text-6xl ${passedQuiz ? "text-red-600" : "text-black"} comic-font uppercase tracking-wider`
+													: "text-lg md:text-xl text-white"
+											}`}
+										>
+											{currentPageData.isConfession ? confessionText : currentPageData.message}
+										</div>
+										{showWordSearchCta && !currentPageData.isConfession && (
+											<div className="mt-6">
+												<Link href={`/pupiletra${returnQuery}`}>
+													<Button
+														size="lg"
+														className="comic-button bg-red-300 border-4 border-red-900 font-black text-white hover:bg-red-400 transform hover:scale-105"
+													>
+														Juega aquí 💛
+													</Button>
+												</Link>
+											</div>
+										)}
+										{showPuzzleCta && !currentPageData.isConfession && (
+											<div className="mt-4">
+												<Link href={`/rompecabezas${returnQuery}`}>
+													<Button
+														size="lg"
+														className="comic-button bg-red-300 border-4 border-red-900 font-black text-white hover:bg-red-400 transform hover:scale-105"
+													>
+														Juega aqui Preciosa 💖
+													</Button>
+												</Link>
+											</div>
+										)}
+										{gameLink && !currentPageData.isConfession && (
+											<div className="mt-4">
+												<Link href={`${gameLink.href}${returnQuery}`}>
+													<Button
+														size="lg"
+														className="comic-button bg-red-300 border-4 border-red-900 font-black text-white hover:bg-red-400 transform hover:scale-105"
+													>
+														{gameLink.label}
+													</Button>
+												</Link>
+											</div>
+										)}
+										{currentPageData.isConfession && (
+											<div className="mt-4 text-lg font-black text-black comic-font">
+												Resultado final: {quizPercentage}%
+											</div>
+										)}
+									</>
+								) : (
+									<div className="text-center">
+										<p className="text-lg sm:text-xl font-black text-black mb-2 comic-font">
+											Mini-juego: responde para desbloquear la revelación
+										</p>
+										<p className="text-sm font-bold text-black mb-1">
+											Pregunta {quizIndex + 1} de {totalQuestions}
+										</p>
+										<p className="text-xs font-black text-black mb-4">
+											Puntaje: {quizScore}/{totalQuestions}
+										</p>
+										<div className="bg-yellow-100 border-4 border-black p-3 sm:p-4 shadow-lg mb-4">
+											<p className="text-black font-black text-lg comic-font">
+												{currentQuestion?.question}
+											</p>
+										</div>
+										<div className="grid gap-3">
+											{currentQuestion?.options.map((option, optionIndex) => {
+												const isSelected = selectedAnswer === optionIndex
+												const isCorrect = optionIndex === currentQuestion.correctIndex
+												const showCorrect = selectedAnswer !== null && isCorrect
+												const showIncorrect = selectedAnswer !== null && isSelected && !isCorrect
+												return (
+													<button
+														key={option}
+														onClick={() => handleAnswer(optionIndex)}
+														disabled={selectedAnswer !== null}
+														className={`w-full border-4 border-black font-black px-4 py-3 comic-font transition-transform transform hover:scale-105 ${
+															showCorrect
+																? "bg-green-300"
+																: showIncorrect
+																? "bg-red-300"
+																: "bg-white"
+														}`}
+													>
+														{option}
+													</button>
+												)
+											})}
+										</div>
+										{selectedAnswer !== null && (
+											<div className="mt-4">
+												<div
+													className={`border-4 border-black px-4 py-2 font-black comic-font ${
+														answerFeedback === "correct"
+															? "bg-green-200 text-black"
+															: "bg-red-200 text-black"
+													}`}
+												>
+													{answerFeedback === "correct"
+														? `¡Correcto! Progreso: ${Math.round(((quizScore + 1) / totalQuestions) * 100)}%`
+														: `Ups, casi. Progreso: ${Math.round((quizScore / totalQuestions) * 100)}%`}
+												</div>
+												<Button
+													onClick={nextQuestion}
+													size="lg"
+													className="comic-button bg-red-300 border-4 border-red-900 font-black text-white hover:bg-red-400 transform hover:scale-105 mt-3"
+												>
+													{quizIndex < totalQuestions - 1
+														? "Siguiente pregunta"
+														: "Ver la revelación"}
+												</Button>
+											</div>
+										)}
+									</div>
+								)}
 							</div>
 						</div>
 
@@ -270,7 +463,7 @@ export default function SpiderManLoveStory() {
 							</div>
 						</div>
 
-						{currentPageData.isConfession && (
+						{currentPageData.isConfession && revealConfession && (
 							<div className="text-center">
 								<div className="comic-explosion bg-yellow-300 border-4 border-black p-2 sm:p-4 transform rotate-3 shadow-lg inline-block">
 									<div className="flex items-center gap-2 text-2xl">
@@ -292,7 +485,7 @@ export default function SpiderManLoveStory() {
 						disabled={currentPage === 0}
 						variant="outline"
 						size="lg"
-						className="comic-button bg-white border-4 border-black font-black text-black hover:bg-yellow-200 transform hover:scale-105"
+						className="comic-button bg-red-300 border-4 border-red-900 font-black text-white hover:bg-red-400 transform hover:scale-105"
 					>
 						<ChevronLeft className="w-4 h-4" />
 						ANTERIOR
@@ -312,7 +505,7 @@ export default function SpiderManLoveStory() {
 						onClick={nextPage}
 						disabled={currentPage === pages.length - 1}
 						size="lg"
-						className="comic-button bg-red-600 border-4 border-black font-black text-white hover:bg-red-700 transform hover:scale-105"
+						className="comic-button bg-red-300 border-4 border-red-900 font-black text-white hover:bg-red-400 transform hover:scale-105"
 					>
 						SIGUIENTE
 						<ChevronRight className="w-4 h-4" />
@@ -325,6 +518,7 @@ export default function SpiderManLoveStory() {
 							¡CON AMOR Y TELARAÑAS! 🕸️ ❤️
 						</p>
 					</div>
+					
 				</div>
 			</div>
 		</div>

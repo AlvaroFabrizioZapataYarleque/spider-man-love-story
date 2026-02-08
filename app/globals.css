@@ -437,3 +437,31 @@
 .comic-explosion {
   animation: comic-shake 0.5s ease-in-out infinite;
 }
+
+@media (max-width: 640px) {
+  .comic-panel {
+    box-shadow: 4px 4px 0px #000, 6px 6px 0px #ccc;
+  }
+
+  .comic-panel:hover {
+    animation: none;
+  }
+
+  .comic-button::before {
+    top: -3px;
+    left: -3px;
+    right: -3px;
+    bottom: -3px;
+  }
+
+  .comic-title-banner {
+    clip-path: polygon(3% 0%, 100% 0%, 97% 100%, 0% 100%);
+  }
+
+  .comic-photo-frame::before {
+    top: -6px;
+    left: -6px;
+    right: -6px;
+    bottom: -6px;
+  }
+}
